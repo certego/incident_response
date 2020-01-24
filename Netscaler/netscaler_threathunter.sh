@@ -27,9 +27,9 @@
 #   - nsroot/root privileges
 #
 ### To execute this script without writing file to disk:
-#   curl 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- '-a -l' 2>/tmp/netscaler_threathunter_error.log
-#   fetch -qo - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- '-a -l' 2>/tmp/netscaler_threathunter_error.log
-#   wget -qO - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null | bash -s -- '-a -l' 2>/tmp/netscaler_threathunter_error.log
+#    curl 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- -a -l 2>/tmp/netscaler_threathunter_error.log
+#    fetch -qo - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- -a -l 2>/tmp/netscaler_threathunter_error.log
+#    wget -qO - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null | bash -s -- -a -l 2>/tmp/netscaler_threathunter_error.log
 
 CURRENT_SHELL="$(ps -p `ps -o ppid= $$` -o command | tail -1)"
 
@@ -97,9 +97,9 @@ help()
         
         [*] To execute this script without writing script to disk:
 
-                curl 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- '-a -l' 2>/tmp/netscaler_threathunter_error.log
-                fetch -qo - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- '-a -l' 2>/tmp/netscaler_threathunter_error.log
-                wget -qO - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null | bash -s -- '-a -l' 2>/tmp/netscaler_threathunter_error.log
+                curl 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- -a -l 2>/tmp/netscaler_threathunter_error.log
+                fetch -qo - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- -a -l 2>/tmp/netscaler_threathunter_error.log
+                wget -qO - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null | bash -s -- -a -l 2>/tmp/netscaler_threathunter_error.log
 EOF
         colored_print 34 "$HELP"
                                                 
