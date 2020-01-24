@@ -10,8 +10,33 @@ Following the incidents related to the exploitation of the CVE-2019-19781 we dev
 **Requirements**:
 
 1. Netscaler running on FreeBSD OS
-2. At least _curl_ or _fetch_ installed
-3. _nsroot_ or _root_ privileges
+2. _nsroot_ or _root_ privileges
 
+## Purposes:
 
-This script aims to enumerate CVE-2019-19781 exploitation and to spot possible advanced privilege escalation.
+This script aims to:
+
+1. validate patch of CVE-2019-19781
+2. enumerate persistences and artifacts related to CVE-2019-19781
+3. guide users to change `ns.conf` credentials to avoid future campaigns and to patch quickly
+4. spot possible advanced privilege escalation.
+
+## FileBase Execution
+
+```
+shell
+cd <path/to/uploaded/netscaler_treathunter.sh>
+chmod +x netscaler_threathunter.sh
+./netscaler_threathunter.sh -a -l 2>/tmp/netscaler_threathunter_errors.log ### at the moment the script does not log errors
+```
+
+## FileLess Execution
+
+```
+shell
+bash
+### then run one of the following commands:
+curl 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- '-a -l' 2>netscaler_threathunter_error.log
+fetch -qo - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- '-a -l' 2>netscaler_threathunter_error.log
+wget -qO - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null | bash -s -- '-a -l' 2>/tmp/netscaler_threathunter_error.log
+```
