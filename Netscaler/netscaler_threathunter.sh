@@ -1003,7 +1003,6 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                 }
             
             get_nobody_recents
-            get_all_recents
             get_files_owned_by_unknown_users
             get_bad_users
             get_unknown_writable_root_files
