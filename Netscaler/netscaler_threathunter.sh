@@ -109,7 +109,7 @@ EOF
 
 unset mtimestamp Mtimestamp force logging all nobody
 
-while getopts 't:flahnC' option
+while getopts 't:T:flahnC' option
     do
         case "${option}" in
             t) mtimestamp=${OPTARG};;
