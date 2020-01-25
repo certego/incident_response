@@ -87,7 +87,8 @@ help()
 
 
 
-               -t<timestamp>    # specify ctime timestamp
+               -t<timestamp>    # specify mintimestamp # example: -t2020-01-09
+               -T<timestamp>    # specify maxtimestamp, actually working only on all_users_recent_files and all_nobody_recent_files # example: -T2020-01-09
                -f               # try to run the script on non freebsd system
                -l               # enable logging
                -n               # check nobody based persistences and IOC
@@ -106,12 +107,13 @@ EOF
 
     }
 
-unset timestamp force logging all nobody
+unset mtimestamp Mtimestamp force logging all nobody
 
 while getopts 't:flahnC' option
     do
         case "${option}" in
-            t) timestamp=${OPTARG};;
+            t) mtimestamp=${OPTARG};;
+            T) Mtimestamp=${OPTARG};;
             n) nobody=1;;
             f) force=1;;
             l) logging=1;;
@@ -149,23 +151,40 @@ out-string()
         fi
     }
 
-if [ -z $timestamp ]
+
+if [ -z $mtimestamp ]
     then
-        MINCTIME="2020-01-09"
+        MINTIMESTAMP="2020-01-09"
 else
-        date -f "%Y-%m-%d" -j "$timestamp" >/dev/null 2>&1
+        date -f "%Y-%m-%d" -j "$mtimestamp" >/dev/null 2>&1
         if [[ $? != 0 ]]
             then
-                out-string '[!] Error: Bad timestamp, please follow this format: <year>-<month>-<day>'
+                out-string '[!] Error: Bad mintimestamp, please follow this format: <year>-<month>-<day>'
                 exit 1
         fi
-        MINCTIME="$timestamp"
+        MINTIMESTAMP="$mtimestamp"
+fi
+
+if [ -z $Mtimestamp ]
+    then
+        MAXTIMESTAMP="`date +"%Y-%m-%d"`"
+else
+        date -f "%Y-%m-%d" -j "$Mtimestamp" >/dev/null 2>&1
+        if [[ $? != 0 ]]
+            then
+                out-string '[!] Error: Bad maxtimestamp, please follow this format: <year>-<month>-<day>'
+                exit 1
+        fi
+        MAXTIMESTAMP="$Mtimestamp"
 fi
 
 if [[ $EUID -ne 0 ]]
     then
     echo "[-] Warning: it is recommended to run the script with nsroot/root privileges" 
 fi
+
+### FreeBSD appears to natively support birthtime
+
 
 #debuglog ()
 ##{
@@ -236,20 +255,25 @@ EOF
 EOF
 
     read -r -d '' all_nobody_recents_files_find <<"EOF"
-    find / \( -path /dev -o -path /proc -o -path /var/log -o -path /var/run -o -path /var/nslog \
- -o -path /var/netscaler/help  -o -path /var/netscaler/help_cisco \) -prune -o -user nobody \
- -type f -a \( -newerct MINCTIME -o -newermt MINCTIME \) -ls 2>/dev/null
+    find / \( -path /dev -o -path /proc \) -prune -o -user nobody \
+ -type f -a \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -ls 2>/dev/null
 EOF
 
-
+all_nobody_recents_files_find="`echo "$all_nobody_recents_files_find" | sed -r "s/MINTIMESTAMP/$MINTIMESTAMP/g"`"
+all_nobody_recents_files_find="`echo "$all_nobody_recents_files_find" | sed -r "s/MAXTIMESTAMP/$MAXTIMESTAMP/g"`"
 
     read -r -d '' all_users_recents_files_find <<"EOF"
     find / \( -path /dev -o -path /proc \) \
-    -prune -o \( -newerct MINCTIME -o -newermt MINCTIME \) -ls 2>/dev/null
+    -prune -o \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -ls 2>/dev/null
 EOF
 
-all_nobody_recents_files_find="`echo "$all_nobody_recents_files_find" | sed -r "s/MINCTIME/$MINCTIME/g"`"
-all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/MINCTIME/$MINCTIME/g"`"
+
+all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/MINTIMESTAMP/$MINTIMESTAMP/g"`"
+all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/MAXTIMESTAMP/$MAXTIMESTAMP/g"`"
+
+
+
+
 
     SUID_SGID_REGEX="^(/netscaler/ping|\
 /netscaler/ping6|\
@@ -416,10 +440,10 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                             fi
                             out-string    "[*] Details: https://twitter.com/KevTheHermit/status/1216318333219491840"
 
-                            AWS_DEFAULT_METADATA_FILE_ATIME="`find /flash/nsconfig/.AWS/instance-id -type f -newerat $MINCTIME 2>/dev/null`"
+                            AWS_DEFAULT_METADATA_FILE_ATIME="`find /flash/nsconfig/.AWS/instance-id -type f -newerat $MINTIMESTAMP 2>/dev/null`"
 
                             if [[ ! -z "$AWS_DEFAULT_METADATA_FILE_ATIME" ]]
-                                then out-string "[!!!] AWS default credentials file was accessed withing the atime $MINCTIME"
+                                then out-string "[!!!] AWS default credentials file was accessed withing the atime $MINTIMESTAMP"
                             fi
                             out-string    "#####################################################################################"
                     fi
@@ -469,8 +493,8 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
             get_nobody_backdoors()
 
                 {
-                    POSSIBLE_NOBODY_WEBSHELLS_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newerct $MINCTIME -ls 2>/dev/null`"
-                    POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newermt $MINCTIME -ls 2>/dev/null`"
+                    POSSIBLE_NOBODY_WEBSHELLS_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
+                    POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newermt $MINTIMESTAMP -ls 2>/dev/null`"
                     if [[ ! -z "$POSSIBLE_NOBODY_WEBSHELLS_AND_PL" ]]
                         then
                             out-string    "############################ [Possible nobody webshells] ############################"
@@ -510,8 +534,8 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
             get_nobody_crons()
 
                 {
-                    NOBODYTAB="`find /var/cron/tabs/nobody -type f -newerct $MINCTIME -ls 2>/dev/null`"
-                    NOBODY_CRONJOBS="`find /var/cron/tabs/nobody -type f -newerct $MINCTIME -cat {} + 2>/dev/null | grep -vE '^#'`"
+                    NOBODYTAB="`find /var/cron/tabs/nobody -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
+                    NOBODY_CRONJOBS="`find /var/cron/tabs/nobody -type f -newerct $MINTIMESTAMP -cat {} + 2>/dev/null | grep -vE '^#'`"
                     NOTROBIN_CHECK="` echo "$NOBODY_CRONJOBS" | fgrep '/var/nstmp/.nscache/httpd'`"
                     if [[ ! -z "$NOBODYTAB" ]]
                         then
@@ -556,7 +580,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
             get_xml_and_nsconf_infos()
 
                 {
-                    XML_ARTIFACTS="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*\.xml$' -user nobody -type f -newerct $MINCTIME -ls 2>/dev/null`"
+                    XML_ARTIFACTS="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*\.xml$' -user nobody -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
                     if [[ ! -z "$XML_ARTIFACTS" ]]
                         then
                             out-string    "############################# [Possible .xml artifacts] #############################"
@@ -564,12 +588,12 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                             out-string    "#####################################################################################"
                     fi
 
-                    XML_CONTENT_m1500="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*\.xml$' -user nobody -type f -newerct $MINCTIME -size -1500c -exec cat {} + 2>/dev/null`"
-                    XML_CONTENT_M1500_POSSIBLE_OUTPUT_COMMANDS="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*\.xml$' -user nobody -type f -newerct $MINCTIME -size +1500c -exec cat {} + 2>/dev/null`"
+                    XML_CONTENT_m1500="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*\.xml$' -user nobody -type f -newerct $MINTIMESTAMP -size -1500c -exec cat {} + 2>/dev/null`"
+                    XML_CONTENT_M1500_POSSIBLE_OUTPUT_COMMANDS="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*\.xml$' -user nobody -type f -newerct $MINTIMESTAMP -size +1500c -exec cat {} + 2>/dev/null`"
                     
 
                     XML_COMMANDS_INSIDE="`echo "$XML_CONTENT_m1500"  | fgrep "template.new({'BLOCK'='" | sed -r "s/.*template.new\(\{'BLOCK'='(.*)%].*/\1/g"| sort | uniq -ic | sort -rnk1`"
-                    XML_COMMANDS_IN_NAME="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*%.*\.xml$' -user nobody -type f -newerct $MINCTIME -ls 2>/dev/null`"
+                    XML_COMMANDS_IN_NAME="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*%.*\.xml$' -user nobody -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
 
                     if [[ !  ( -z "$XML_COMMANDS_INSIDE" && -z $XML_COMMANDS_IN_NAME ) ]]
                         then
@@ -605,7 +629,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                             out-string    "[*] Details: https://twitter.com/msandbu/status/1215959733900840963"
                             out-string    "#####################################################################################"
                     fi
-                    CHECK_NSCONF_ATIME="`find /flash/nsconfig/ns.conf /nsconfig/ns.conf -newerat $MINCTIME -ls 2>/dev/null`"
+                    CHECK_NSCONF_ATIME="`find /flash/nsconfig/ns.conf /nsconfig/ns.conf -newerat $MINTIMESTAMP -ls 2>/dev/null`"
                     if [[ ! -z "$CHECK_NSCONF_ATIME" ]]
                         then
                             out-string    "############################### [Recent ns.conf atime] ##############################"
@@ -771,8 +795,8 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
 
             get_startup_scripts()
                 {
-                    START_SCRIPTS_USERPROFILES="`find /root/ /home/ \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINCTIME -ls 2>/dev/null`" 
-                    START_SCRIPTS="`find / -maxdepth 1 \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINCTIME -ls 2>/dev/null`"
+                    START_SCRIPTS_USERPROFILES="`find /root/ /home/ \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`" 
+                    START_SCRIPTS="`find / -maxdepth 1 \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
                     if [[ ! ( -z "$START_SCRIPTS_USERPROFILES" && -z "$START_SCRIPTS" ) ]]
                         then
                             out-string    "################################# [Startup scripts] #################################"
@@ -848,7 +872,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                     KNOWN_SERVICES_REGEX="^/etc/rc\.d/(devfs|dscache|ns_raid)$"
                     UNEXPECTED_RC_FILES="`find /usr/local/etc/rc.d /etc/rc.shutdown /etc/rc.conf.d/* 2>/dev/null -l`"
                     RCD="`find /etc/rc.d/* 2>/dev/null | grep -Ev "$KNOWN_SERVICES_REGEX"`"
-                    RECENT_RC_CONF="` find /etc/rc.d* /etc/rc /etc/rc.conf /etc/rc.conf.local /etc/rc.subr /etc/defaults/* -type f -a \( -newermt $MINCTIME -o -newerct $MINCTIME \) -ls 2>/dev/null`"
+                    RECENT_RC_CONF="` find /etc/rc.d* /etc/rc /etc/rc.conf /etc/rc.conf.local /etc/rc.subr /etc/defaults/* -type f -a \( -newermt $MINTIMESTAMP -o -newerct $MINTIMESTAMP \) -ls 2>/dev/null`"
 
                     if [[ ! -z $UNEXPECTED_RC_FILES || ! -z $RCD || ! -z $RECENT_RC_CONF ]]
                         then
@@ -878,8 +902,8 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
 
             get_loader()
                 {
-                    RECENT_LOADER_CONF="`find /flash/boot/defaults/loader.conf /flash/boot/loader.conf -type f -newermt $MINCTIME -ls 2>/dev/null`"
-                    LOADER_CONF_CONTENT="`find /flash/boot/defaults/loader.conf /flash/boot/loader.conf -type f -newermt $MINCTIME -exec cat {} 2>/dev/null | grep -Ev '^#'`"
+                    RECENT_LOADER_CONF="`find /flash/boot/defaults/loader.conf /flash/boot/loader.conf -type f -newermt $MINTIMESTAMP -ls 2>/dev/null`"
+                    LOADER_CONF_CONTENT="`find /flash/boot/defaults/loader.conf /flash/boot/loader.conf -type f -newermt $MINTIMESTAMP -exec cat {} 2>/dev/null | grep -Ev '^#'`"
                     UNEXPECTED_LOADER_LOCATION="`find /boot/defaults/loader.conf /boot/loader.conf -type f -ls 2>/dev/null`"
 
                     if [[ ! -z $UNEXPECTED_LOADER_LOCATION || ! -z $RECENT_LOADER_CONF ]]
