@@ -10,8 +10,8 @@
 # License: AGPL-3.0
 #
 ## links:
-#   https://www.certego.net/en/news/
-#   httpx://github.com/xxx
+#   https://www.certego.net/en/news/netscaler-threathunter-sh-a-bash2-compatible-script-to-digital-forensic-and-incident-response-on-citrix-adc/
+#   https://github.com/certego/incident_response/blob/master/Netscaler/README.md
 #   https://twitter.com/gabriele_pippi
 #   https://twitter.com/certego_irt
 #

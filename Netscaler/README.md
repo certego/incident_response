@@ -40,3 +40,5 @@ curl 'https://raw.githubusercontent.com/certego/incident_response/master/Netscal
 fetch -qo - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- -a -l 2>netscaler_threathunter_error.log
 wget -qO - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null | bash -s -- -a -l 2>/tmp/netscaler_threathunter_error.log
 ```
+
+https://www.certego.net/en/news/netscaler-threathunter-sh-a-bash2-compatible-script-to-digital-forensic-and-incident-response-on-citrix-adc/
