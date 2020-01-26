@@ -36,7 +36,7 @@ chmod +x netscaler_threathunter.sh
 shell
 bash
 ### then run one of the following commands:
-curl 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- '-a -l' 2>netscaler_threathunter_error.log
-fetch -qo - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- '-a -l' 2>netscaler_threathunter_error.log
-wget -qO - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null | bash -s -- '-a -l' 2>/tmp/netscaler_threathunter_error.log
+curl 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- -a -l 2>netscaler_threathunter_error.log
+fetch -qo - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null| bash -s -- -a -l 2>netscaler_threathunter_error.log
+wget -qO - 'https://raw.githubusercontent.com/certego/incident_response/master/Netscaler/netscaler_threathunter.sh' 2>/dev/null | bash -s -- -a -l 2>/tmp/netscaler_threathunter_error.log
 ```
