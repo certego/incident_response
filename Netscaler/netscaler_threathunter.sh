@@ -376,7 +376,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                                                 unknown_services_counter=$(( $unknown_services_counter + 1 ))
                                                 if [[ $unknown_services_counter == 1 ]]
                                                     then
-                                                        out-string    "################################ [Unknown Services] #################################"
+                                                        out-string    "################################# [Unknown daemons] #################################"
                                                 fi
 
                                                 out-string "[!] Unknown service ${BINARY_PATH} is binding trusted netscaler port ${PORT}:"
@@ -497,7 +497,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                     POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newermt $MINTIMESTAMP -ls 2>/dev/null`"
                     if [[ ! -z "$POSSIBLE_NOBODY_WEBSHELLS_AND_PL" ]]
                         then
-                            out-string    "############################ [Possible nobody webshells] ############################"
+                            out-string    "#################### [possible nobody webshells and perl scripts] ###################"
                             out-string    "$POSSIBLE_NOBODY_WEBSHELLS_AND_PL"
                             out-string    "#####################################################################################"
                     fi
@@ -1039,6 +1039,21 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                 then
                     out-string    "############################# [all users recent files] ##############################"
                     out-string    "$ALL_RECENTS_FILES"
+                    out-string    "#####################################################################################"
+            fi
+
+            CONTENT_OF_POSSIBLE_NOBODY_WEBSHELLS_AND_PL="`find / ! \( -regex '^/dev*' -o -regex '^/proc*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newerct $MINCTIME -exec cat {} + 2>/dev/null`"
+            CONTENT_OF_POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL="`find / ! \( -regex '^/dev*' -o -regex '^/proc*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newermt $MINCTIME -exec cat {} + 2>/dev/null`"
+            if [[ ! -z "$CONTENT_OF_POSSIBLE_NOBODY_WEBSHELLS_AND_PL" ]]
+                then
+                    out-string    "############## [content of possible nobody webshells and perl scripts] ##############"
+                    out-string    "$CONTENT_OF_POSSIBLE_NOBODY_WEBSHELLS_AND_PL"
+                    out-string    "#####################################################################################"
+            fi
+            if [[ ! -z "$CONTENT_OF_POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL" ]]
+                then
+                    out-string    "######## [content of possible licit .php/.pl files modified by the attacker] ########"
+                    out-string    "$CONTENT_OF_POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL"
                     out-string    "#####################################################################################"
             fi
         }
