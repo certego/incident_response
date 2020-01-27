@@ -1042,8 +1042,8 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                     out-string    "#####################################################################################"
             fi
 
-            CONTENT_OF_POSSIBLE_NOBODY_WEBSHELLS_AND_PL="`find / ! \( -regex '^/dev*' -o -regex '^/proc*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newerct $MINCTIME -exec cat {} + 2>/dev/null`"
-            CONTENT_OF_POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL="`find / ! \( -regex '^/dev*' -o -regex '^/proc*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newermt $MINCTIME -exec cat {} + 2>/dev/null`"
+            CONTENT_OF_POSSIBLE_NOBODY_WEBSHELLS_AND_PL="`find / ! \( -regex '^/dev*' -o -regex '^/proc*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newerct $MINTIMESTAMP -exec bash -c "echo \"[*] content of {}\" ; cat {}" \; 2>/dev/null`"
+            CONTENT_OF_POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL="`find / ! \( -regex '^/dev*' -o -regex '^/proc*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newermt $MINTIMESTAMP -exec bash -c "echo \"[*] content of {}\" ; cat {}" \; 2>/dev/null`"
             if [[ ! -z "$CONTENT_OF_POSSIBLE_NOBODY_WEBSHELLS_AND_PL" ]]
                 then
                     out-string    "############## [content of possible nobody webshells and perl scripts] ##############"
