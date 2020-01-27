@@ -136,7 +136,7 @@ fi
 
 if [ $logging ]
     then
-        LOG_FILE=/tmp/netscaler_threathunter"-"`date +"%d-%m-%y-%H:%M:%S"`.log
+        LOG_FILE=/tmp/netscaler_threathunter"-"`date +"%d-%m-%y-%H_%M_%S"`.log
         echo "[*] Start logging to ${LOG_FILE}"
         echo -e "[*] Start logging $(date +"%Y-%m-%d-%H:%M:%S")\n" >> $LOG_FILE ### date -Iseconds not working on FreeBSD
 fi
