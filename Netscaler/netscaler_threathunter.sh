@@ -251,12 +251,12 @@ EOF
     read -r -d '' unknown_writable_root_file_find <<"EOF"
     find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/var/netscaler/help.*' \
     -o -regex '^/var/netscaler/gui/admin_ui/nitro_client.*' -o -regex '^/var/netscaler/nsbackup.*' -o -regex '^/var/netscaler/gslb.*' \
-    -o -regex '^/flash/.*' \) -user root -perm -o=w -ls 2>/dev/null
+    -o -regex '^/flash/.*' \) -user root -perm -o=w -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null
 EOF
 
     read -r -d '' all_nobody_recents_files_find <<"EOF"
     find / \( -path /dev -o -path /proc \) -prune -o -user nobody \
- -type f -a \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -ls 2>/dev/null
+ -type f -a \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null
 EOF
 
 all_nobody_recents_files_find="`echo "$all_nobody_recents_files_find" | sed -r "s/MINTIMESTAMP/$MINTIMESTAMP/g"`"
@@ -264,7 +264,7 @@ all_nobody_recents_files_find="`echo "$all_nobody_recents_files_find" | sed -r "
 
     read -r -d '' all_users_recents_files_find <<"EOF"
     find / \( -path /dev -o -path /proc \) \
-    -prune -o \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -ls 2>/dev/null
+    -prune -o \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null
 EOF
 
 
@@ -273,7 +273,22 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
 
 
 
-
+    read -r -d '' stat_from_stdin_file <<"EOF"
+        perl -e '
+        use File::stat;
+        use Time::Piece;
+        $filename =<STDIN>;
+        $sb = stat($filename);
+        printf "%04o %s %s %s atime:\"%s\" mtime:\"%s\" ctime:\"%s\" %s\n",
+        $sb->mode & 07777,
+        $sb->size,
+        (getpwuid $sb->uid)[0],
+        (getgrgid $sb->gid)[0],
+        (scalar localtime $sb->atime)[0],
+        (scalar localtime $sb->mtime)[0],
+        (scalar localtime $sb->ctime)[0],
+        $filename;'
+EOF
 
     SUID_SGID_REGEX="^(/netscaler/ping|\
 /netscaler/ping6|\
@@ -493,8 +508,8 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
             get_nobody_backdoors()
 
                 {
-                    POSSIBLE_NOBODY_WEBSHELLS_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
-                    POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newermt $MINTIMESTAMP -ls 2>/dev/null`"
+                    POSSIBLE_NOBODY_WEBSHELLS_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newerct $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
+                    POSSIBLE_NOBODY_MODIFIED_PHP_AND_PL="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -a \( -regex '.*\.pl$' -o -regex '.*\.php$' \) -user nobody -type f -newermt $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
                     if [[ ! -z "$POSSIBLE_NOBODY_WEBSHELLS_AND_PL" ]]
                         then
                             out-string    "#################### [possible nobody webshells and perl scripts] ###################"
@@ -534,7 +549,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
             get_nobody_crons()
 
                 {
-                    NOBODYTAB="`find /var/cron/tabs/nobody -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
+                    NOBODYTAB="`find /var/cron/tabs/nobody -type f -newerct $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
                     NOBODY_CRONJOBS="`find /var/cron/tabs/nobody -type f -newerct $MINTIMESTAMP -cat {} + 2>/dev/null | grep -vE '^#'`"
                     NOTROBIN_CHECK="` echo "$NOBODY_CRONJOBS" | fgrep '/var/nstmp/.nscache/httpd'`"
                     if [[ ! -z "$NOBODYTAB" ]]
@@ -553,7 +568,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                                 then
                                     out-string    '[!] Please manually check and clean nobody unknown cronjobs:'
                                     out-string    '[*] Run this command to delete all nobody cronjobs:'
-                                    out-string    '    crontab -u nobody -r -f'
+                                    out-string    '    crontab -u nobody -r'
                                     out-string    '[*] Run this command to delete a specific cronjob:'
                                     out-string         'crontab -u nobody -l | fgrep -v "<unique pattern of malicious task>"  | crontab -u nobody -'
                             fi
@@ -580,7 +595,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
             get_xml_and_nsconf_infos()
 
                 {
-                    XML_ARTIFACTS="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*\.xml$' -user nobody -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
+                    XML_ARTIFACTS="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*\.xml$' -user nobody -type f -newerct $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
                     if [[ ! -z "$XML_ARTIFACTS" ]]
                         then
                             out-string    "############################# [Possible .xml artifacts] #############################"
@@ -593,7 +608,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                     
 
                     XML_COMMANDS_INSIDE="`echo "$XML_CONTENT_m1500"  | fgrep "template.new({'BLOCK'='" | sed -r "s/.*template.new\(\{'BLOCK'='(.*)%].*/\1/g"| sort | uniq -ic | sort -rnk1`"
-                    XML_COMMANDS_IN_NAME="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*%.*\.xml$' -user nobody -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
+                    XML_COMMANDS_IN_NAME="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/flash/.*' \) -a -regex '.*%.*\.xml$' -user nobody -type f -newerct $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
 
                     if [[ !  ( -z "$XML_COMMANDS_INSIDE" && -z $XML_COMMANDS_IN_NAME ) ]]
                         then
@@ -629,7 +644,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                             out-string    "[*] Details: https://twitter.com/msandbu/status/1215959733900840963"
                             out-string    "#####################################################################################"
                     fi
-                    CHECK_NSCONF_ATIME="`find /flash/nsconfig/ns.conf /nsconfig/ns.conf -newerat $MINTIMESTAMP -ls 2>/dev/null`"
+                    CHECK_NSCONF_ATIME="`find /flash/nsconfig/ns.conf /nsconfig/ns.conf -newerat $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
                     if [[ ! -z "$CHECK_NSCONF_ATIME" ]]
                         then
                             out-string    "############################### [Recent ns.conf atime] ##############################"
@@ -738,7 +753,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
 
             get_files_owned_by_unknown_users()
                 {
-                    FILES_OWNED_BY_UNKNOWN_USERS="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -nouser ! -uid 1003 ! -uid 1001 ! -uid 66 ! -uid 501 -ls 2>/dev/null`"
+                    FILES_OWNED_BY_UNKNOWN_USERS="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' \) -nouser ! -uid 1003 ! -uid 1001 ! -uid 66 ! -uid 501 -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
                     if [[ ! -z "$FILES_OWNED_BY_UNKNOWN_USERS" ]]
                         then
                             out-string    "########################### [Files owned by unknown users] ##########################"
@@ -795,8 +810,8 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
 
             get_startup_scripts()
                 {
-                    START_SCRIPTS_USERPROFILES="`find /root/ /home/ \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`" 
-                    START_SCRIPTS="`find / -maxdepth 1 \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINTIMESTAMP -ls 2>/dev/null`"
+                    START_SCRIPTS_USERPROFILES="`find /root/ /home/ \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`" 
+                    START_SCRIPTS="`find / -maxdepth 1 \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
                     if [[ ! ( -z "$START_SCRIPTS_USERPROFILES" && -z "$START_SCRIPTS" ) ]]
                         then
                             out-string    "################################# [Startup scripts] #################################"
@@ -872,7 +887,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
                     KNOWN_SERVICES_REGEX="^/etc/rc\.d/(devfs|dscache|ns_raid)$"
                     UNEXPECTED_RC_FILES="`find /usr/local/etc/rc.d /etc/rc.shutdown /etc/rc.conf.d/* 2>/dev/null -l`"
                     RCD="`find /etc/rc.d/* 2>/dev/null | grep -Ev "$KNOWN_SERVICES_REGEX"`"
-                    RECENT_RC_CONF="` find /etc/rc.d* /etc/rc /etc/rc.conf /etc/rc.conf.local /etc/rc.subr /etc/defaults/* -type f -a \( -newermt $MINTIMESTAMP -o -newerct $MINTIMESTAMP \) -ls 2>/dev/null`"
+                    RECENT_RC_CONF="` find /etc/rc.d* /etc/rc /etc/rc.conf /etc/rc.conf.local /etc/rc.subr /etc/defaults/* -type f -a \( -newermt $MINTIMESTAMP -o -newerct $MINTIMESTAMP \) -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
 
                     if [[ ! -z $UNEXPECTED_RC_FILES || ! -z $RCD || ! -z $RECENT_RC_CONF ]]
                         then
@@ -902,9 +917,9 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
 
             get_loader()
                 {
-                    RECENT_LOADER_CONF="`find /flash/boot/defaults/loader.conf /flash/boot/loader.conf -type f -newermt $MINTIMESTAMP -ls 2>/dev/null`"
+                    RECENT_LOADER_CONF="`find /flash/boot/defaults/loader.conf /flash/boot/loader.conf -type f -newermt $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
                     LOADER_CONF_CONTENT="`find /flash/boot/defaults/loader.conf /flash/boot/loader.conf -type f -newermt $MINTIMESTAMP -exec cat {} 2>/dev/null | grep -Ev '^#'`"
-                    UNEXPECTED_LOADER_LOCATION="`find /boot/defaults/loader.conf /boot/loader.conf -type f -ls 2>/dev/null`"
+                    UNEXPECTED_LOADER_LOCATION="`find /boot/defaults/loader.conf /boot/loader.conf -type f -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
 
                     if [[ ! -z $UNEXPECTED_LOADER_LOCATION || ! -z $RECENT_LOADER_CONF ]]
                         then
@@ -933,7 +948,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
             is_sudo_installed()
                 {
                     PATH_TO_SUDO="`which sudo`"
-                    SUDO_CONF="`find /etc/sudoers* -ls 2>/dev/null`"
+                    SUDO_CONF="`find /etc/sudoers* -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
 
                     if [ "$PATH_TO_SUDO" ]
                         then
@@ -952,7 +967,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
             is_doas_installed()
                 {
                     PATH_TO_DOAS="`which doas`"
-                    DOAS_CONF="`find /etc/doas.conf* -ls 2>/dev/null`"
+                    DOAS_CONF="`find /etc/doas.conf* -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
 
                     if [ "$PATH_TO_DOAS" ]
                         then
@@ -990,7 +1005,7 @@ all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/
 
             is_periodic_installed()
                 {
-                    PATH_TO_PERIODIC_FILES="`find /etc/periodic /usr/local/etc/periodic /etc/periodic.conf /etc/periodic.conf.local /etc/default/periodic.conf -ls 2>/dev/null`"
+                    PATH_TO_PERIODIC_FILES="`find /etc/periodic /usr/local/etc/periodic /etc/periodic.conf /etc/periodic.conf.local /etc/default/periodic.conf -exec bash -c "echo -n {} | $stat_from_stdin_file" \; 2>/dev/null`"
 
                     if [[ ! -z "$PATH_TO_PERIODIC_FILES" ]]
                         then
