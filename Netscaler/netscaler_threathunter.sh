@@ -697,8 +697,10 @@ EOF
             get_ioe()
                 {
                     # update 20/01/2020 , thanks to @x1sec https://github.com/x1sec/CVE-2019-19781/blob/master/CVE-2019-19781-DFIR.md
-                    WEBSHELL_EXPLOITATION="`grep -iE '(support|shared|n_top|vpn|themes).+\.php HTTP/1\.1\" 200' /var/log/httpaccess.log 2>/dev/null`"
-                    WEBSHELL_EXPLOITATION_GZ="`zgrep -iE '(support|shared|n_top|vpn|themes).+\.php HTTP/1\.1\" 200' /var/log/httpaccess.log.*.gz 2>/dev/null`"
+                    # update on 03/02/2020 through https://github.com/citrix/ioc-scanner-CVE-2019-19781/blob/master/scanners/successful-scanning.sh
+
+                    WEBSHELL_EXPLOITATION="`grep -iEH '(support|shared|n_top|vpn|themes).+\.php[^\s]*\sHTTP/1\.1\"\s200' /var/log/httpaccess.log 2>/dev/null`"
+                    WEBSHELL_EXPLOITATION_GZ="`zgrep -iEH '(support|shared|n_top|vpn|themes).+\.php[^\s]*\sHTTP/1\.1\"\s200' /var/log/httpaccess.log.*.gz 2>/dev/null`"
                     if [[ ! ( -z "$WEBSHELL_EXPLOITATION" && -z "$WEBSHELL_EXPLOITATION_GZ" ) ]]
                         then
                             out-string    "################### [httpaccess.log* Webshell Exploitation (.php)] ##################"
@@ -707,8 +709,8 @@ EOF
                             out-string    "#####################################################################################"
                     fi
 
-                    CVE_EXPLOITATION_PL="`grep -iE '(POST|GET).*\.pl HTTP/1\.1\" 200' -A 1 /var/log/httpaccess.log 2>/dev/null`"
-                    CVE_EXPLOITATION_PL_GZ="`zgrep -iE '(POST|GET).*\.pl HTTP/1\.1\" 200' -A 1 /var/log/httpaccess.log.*.gz 2>/dev/null`"
+                    CVE_EXPLOITATION_PL="`grep -iEH '(POST|GET).*\.pl[^\s]*\sHTTP/1\.1\"\s(304|200)' -A 1 /var/log/httpaccess.log 2>/dev/null`"
+                    CVE_EXPLOITATION_PL_GZ="`zgrep -iEH '(POST|GET).*\.pl[^\s]*\sHTTP/1\.1\"\s(304|200)' -A 1 /var/log/httpaccess.log.*.gz 2>/dev/null`"
                     if [[ ! ( -z "$CVE_EXPLOITATION_PL" && -z "$CVE_EXPLOITATION_PL_GZ" ) ]]
                         then
                             out-string    "# [httpaccess.log* CVE-2019-19781 Exploitation (.pl) and malicious scripts dropped] #"
@@ -717,13 +719,23 @@ EOF
                             out-string    "#####################################################################################"
                     fi
                     
-                    CVE_EXPLOITATION_XML="`zgrep -iE 'GET.*\.xml HTTP/1\.1\" 200' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
-                    CVE_EXPLOITATION_XML_GZ="`zgrep -iE 'GET.*\.xml HTTP/1\.1\" 200' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    CVE_EXPLOITATION_XML="`zgrep -iEH 'GET.*\.xml[^\s]*\sHTTP/1\.1\"\s(304|200)' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    CVE_EXPLOITATION_XML_GZ="`zgrep -iEH 'GET.*\.xml[^\s]*\sHTTP/1\.1\"\s(304|200)' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
                     if [[ ! ( -z "$CVE_EXPLOITATION_XML"  && -z "$CVE_EXPLOITATION_XML_GZ" ) ]]
                         then
                             out-string    "############### [httpaccess.log* CVE-2019-19781 Exploitation (.xml)] ################"
                             out-string    "$CVE_EXPLOITATION_XML"
                             out-string    "$CVE_EXPLOITATION_XML_GZ"
+                            out-string    "#####################################################################################"
+                    fi
+
+                    DIRECT_CONF_FILE_ACCESS="`zgrep -iEH 'GET.*\.conf[^\s]*\sHTTP/1\.1\"\s200' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    DIRECT_CONF_FILE_ACCESS_GZ="`zgrep -iEH 'GET.*\.conf[^\s]*\sHTTP/1\.1\"\s200' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    if [[ ! ( -z "$CVE_EXPLOITATION_XML"  && -z "$CVE_EXPLOITATION_XML_GZ" ) ]]
+                        then
+                            out-string    "############ [httpaccess.log* CVE-2019-19781 direct (.conf) file access] ############"
+                            out-string    "$DIRECT_CONF_FILE_ACCESS"
+                            out-string    "$DIRECT_CONF_FILE_ACCESS_GZ"
                             out-string    "#####################################################################################"
                     fi
                 }
