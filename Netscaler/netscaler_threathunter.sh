@@ -805,7 +805,7 @@ EOF
 
             get_nobody_group_files()
                 {
-                    NOBODY_GROUP_FILES="`find / ! \( -regex '^/dev/.*' -o -regex '^/proc/.*' -o -regex '^/var/core/.*' -o -regex '^/var/nstmp/monitors/.*' \) -group nobody 2>/dev/null`"
+                    NOBODY_GROUP_FILES="`find / ! \( -regex '^/dev.*' -o -regex '^/proc.*' -o -regex '^/var/core.*' -o -regex '^/var/nstmp/monitors.*' \) -group nobody 2>/dev/null`"
                     if [[ ! -z "$NOBODY_GROUP_FILES" ]]
                         then
                             out-string    "############################### [Nobody group files] ################################"
@@ -831,15 +831,51 @@ EOF
                 {
                     START_SCRIPTS_USERPROFILES="`find /root/ /home/ \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; `" 
                     START_SCRIPTS="`find / -maxdepth 1 \( -regex "^.*/\..*profile$" -o -regex "^.*/\..*rc$" -o -regex "^.*/\..*login$" -o -regex "^.*/\..*_logout$" \)  -type f -newerct $MINTIMESTAMP -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; `"
-                    if [[ ! ( -z "$START_SCRIPTS_USERPROFILES" && -z "$START_SCRIPTS" ) ]]
+                    GLOBAL_SCRIPTS="`find /etc -path /etc/monitrc -prune -o -maxdepth 1 \( -regex "^.*/.*profile$" -o -regex "^.*/.*rc$" -o -regex "^.*/.*login$" -o -regex "^.*/.*_logout$" \)  -type f -a \( -newermt $MINTIMESTAMP -o -newerct $MINTIMESTAMP \) -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; `"
+                    
+                    if [[ ! ( -z "$START_SCRIPTS_USERPROFILES" && -z "$START_SCRIPTS" && -z "$GLOBAL_SCRIPTS" ) ]]
                         then
                             out-string    "################################# [Startup scripts] #################################"
-                            out-string    "[!] these files should not exist:"
-                            out-string    ""
                             out-string    "$START_SCRIPTS_USERPROFILES"
                             out-string    "$START_SCRIPTS"
+                            out-string    "$GLOBAL_SCRIPTS"
                             out-string    "#####################################################################################"
                     fi
+                }
+
+            get_ssh_startup_commands()
+                {
+                    GLOBAL_SSHRC="`find /etc/ssh/sshrc -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; `"
+                    GLOBAL_SSHRC_CONTENT="`cat /etc/ssh/sshrc 2>/dev/null`"
+                    if [[ ! -z "$GLOBAL_SSHRC" ]]
+                        then
+                            out-string    "###################################### [sshrc] ######################################"
+                            out-string    "[!] these files should not exist:"
+                            out-string    ""
+                            out-string    "$GLOBAL_SSHRC"
+                            out-string    ""
+                            out-string    "[*] Content:"
+                            out-string    "$GLOBAL_SSHRC_CONTENT"
+                            out-string    "#####################################################################################"
+                    fi
+                    SSHD_CONFIG="`find /etc/ssh/sshd_config -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; `"
+                    SSHD_CONFIG_FORCECOMMAND="`(grep -vE '^\s*#' /etc/ssh/sshd_config | grep -E 'ForceCommand') 2>/dev/null`"
+
+                    if [[ ! -z "$SSHD_CONFIG" ]]
+                        then
+                            out-string    "###################################### [sshrc] ######################################"
+                            out-string    "[!] these files should not exist:"
+                            out-string    ""
+                            out-string    "$SSHD_CONFIG"
+                            if [[ ! -z "$SSHD_CONFIG_FORCECOMMAND" ]]
+                                then
+                                    out-string    ""
+                                    out-string    "[!] ForceCommand option found:"
+                                    out-string    "$SSHD_CONFIG_FORCECOMMAND"
+                            fi
+                        out-string    "#####################################################################################"
+                    fi
+                    
                 }
 
             get_ssh_authorized_keys()
@@ -1043,6 +1079,7 @@ EOF
             get_nobody_group_files
             get_unknown_suid_sgid_files
             get_startup_scripts
+            get_ssh_startup_commands
             get_ssh_authorized_keys
             get_promisc_interfaces
             get_cmdlines_from_proc
