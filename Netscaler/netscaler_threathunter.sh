@@ -254,48 +254,81 @@ EOF
     -o -regex '^/flash/.*' \) -user root -perm -o=w -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; 
 EOF
 
+
+#    read -r -d '' stat_from_stdin_file <<"EOF"
+#        perl -e '
+#        use File::stat;
+#        use Time::Piece;
+#        $filename =<STDIN>;
+#        $sb = stat($filename);
+#
+#        $UID = (getpwuid $sb->uid)[0];
+#        if ( $UID eq "" ) { $UID = $sb->uid };
+#
+#        $GID = (getgrgid $sb->gid)[0];
+#        if ( $GID eq "" ) { $GID = $sb->gid };
+#
+#        printf "%04o %s %s %s atime:\"%s\" mtime:\"%s\" ctime:\"%s\" %s\n",
+#        $sb->mode & 07777,
+#        $sb->size,
+#        $UID,
+#        $GID,
+#        (scalar localtime $sb->atime)[0],
+#        (scalar localtime $sb->mtime)[0],
+#        (scalar localtime $sb->ctime)[0],
+#        $filename;'
+#EOF
+
+    read -r -d '' raw_stat_from_stdin_file <<"EOF"
+            $filename =<STDIN>;
+            $sb = stat($filename);
+
+            $UID = (getpwuid $sb->uid)[0];
+            if ( $UID eq "" ) { $UID = $sb->uid };
+
+            $GID = (getgrgid $sb->gid)[0];
+            if ( $GID eq "" ) { $GID = $sb->gid };
+
+            printf "%04o %s %s %s atime:\"%s\" mtime:\"%s\" ctime:\"%s\" %s\n",
+            $sb->mode & 07777,
+            $sb->size,
+            $UID,
+            $GID,
+            (scalar localtime $sb->atime)[0],
+            (scalar localtime $sb->mtime)[0],
+            (scalar localtime $sb->ctime)[0],
+            $filename;
+EOF
+
+base64(){ perl -e 'use MIME::Base64;$in= <STDIN>; printf "%s",encode_base64($in);' ; }
+b64_stat_from_stdin_file="`echo "$raw_stat_from_stdin_file" | tr -d '\n' | base64 | tr -d '\n'`"
+
+read -r -d '' stat_from_stdin_file <<"EOF"
+perl -e \\"use MIME::Base64; use File::stat; use Time::Piece; eval (decode_base64('B64_STAT_FROM_STDIN_FILE'));\\"
+EOF
+
+stat_from_stdin_file="`echo -n "$stat_from_stdin_file" | sed -r "s/B64_STAT_FROM_STDIN_FILE/$b64_stat_from_stdin_file/g"`"
+
+
     read -r -d '' all_nobody_recents_files_find <<"EOF"
     find / \( -path /dev -o -path /proc \) -prune -o -user nobody \
- -type f -a \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; 
+ -type f -a \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -exec bash -c "echo -n {} | STAT_FROM_STDIN_FILE" 2>/dev/null \; 
 EOF
 
 all_nobody_recents_files_find="`echo "$all_nobody_recents_files_find" | sed -r "s/MINTIMESTAMP/$MINTIMESTAMP/g"`"
 all_nobody_recents_files_find="`echo "$all_nobody_recents_files_find" | sed -r "s/MAXTIMESTAMP/$MAXTIMESTAMP/g"`"
+all_nobody_recents_files_find="`echo -n "$all_nobody_recents_files_find" | sed -r "s/STAT_FROM_STDIN_FILE/$stat_from_stdin_file/g"`"
+
 
     read -r -d '' all_users_recents_files_find <<"EOF"
     find / \( -path /dev -o -path /proc \) \
-    -prune -o \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; 
+    -prune -o \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -exec bash -c "echo -n {} | STAT_FROM_STDIN_FILE" 2>/dev/null \;
 EOF
 
+all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r "s/MINTIMESTAMP/$MINTIMESTAMP/g"`"
+all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r "s/MAXTIMESTAMP/$MAXTIMESTAMP/g"`"
+all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r "s/STAT_FROM_STDIN_FILE/$stat_from_stdin_file/g"`"
 
-all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/MINTIMESTAMP/$MINTIMESTAMP/g"`"
-all_users_recents_files_find="`echo "$all_users_recents_files_find" | sed -r "s/MAXTIMESTAMP/$MAXTIMESTAMP/g"`"
-
-
-
-    read -r -d '' stat_from_stdin_file <<"EOF"
-        perl -e '
-        use File::stat;
-        use Time::Piece;
-        $filename =<STDIN>;
-        $sb = stat($filename);
-
-        $UID = (getpwuid $sb->uid)[0];
-        if ( $UID eq "" ) { $UID = $sb->uid };
-
-        $GID = (getgrgid $sb->gid)[0];
-        if ( $GID eq "" ) { $GID = $sb->gid };
-
-        printf "%04o %s %s %s atime:\"%s\" mtime:\"%s\" ctime:\"%s\" %s\n",
-        $sb->mode & 07777,
-        $sb->size,
-        $UID,
-        $GID,
-        (scalar localtime $sb->atime)[0],
-        (scalar localtime $sb->mtime)[0],
-        (scalar localtime $sb->ctime)[0],
-        $filename;'
-EOF
 
     SUID_SGID_REGEX="^(/netscaler/ping|\
 /netscaler/ping6|\
@@ -858,9 +891,9 @@ EOF
                             out-string    "$GLOBAL_SSHRC_CONTENT"
                             out-string    "#####################################################################################"
                     fi
+
                     SSHD_CONFIG="`find /etc/ssh/sshd_config -exec bash -c "echo -n {} | $stat_from_stdin_file" 2>/dev/null \; `"
                     SSHD_CONFIG_FORCECOMMAND="`(grep -vE '^\s*#' /etc/ssh/sshd_config | grep -E 'ForceCommand') 2>/dev/null`"
-
                     if [[ ! -z "$SSHD_CONFIG" ]]
                         then
                             out-string    "###################################### [sshrc] ######################################"
