@@ -696,7 +696,7 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                     fi
                     
                     NSCONF_SENSITIVE_CONTENT="`find /flash/nsconfig/ns.conf /nsconfig/ns.conf -exec cat {} + 2>/dev/null | fgrep ' -encrypted ' | sed -r "s/[a-zA-Z0-9]{49,}/[THIS_IS_A_HASHED_OR_ENCRYPTED_PASSWORD_CENSORED_BY_THIS_SCRIPT]/g" `"
-                    CRACKABLE_HASHES="`echo "$NSCONF_SENSITIVE_CONTENT" | fgrep -i -- ' -hashmethod ' | sort | uniq -ic | sort -rnk1`"
+                    CRACKABLE_HASHES="`echo "$NSCONF_SENSITIVE_CONTENT" | fgrep -i 'set system user' | sort | uniq -ic | sort -rnk1`"
                     ENCRYPTED_WITH_HARDCODED_KEYS="`echo "$NSCONF_SENSITIVE_CONTENT" | grep -E 'ENCMTHD_(2|3)' | sort | uniq -ic | sort -rnk1`"
 
                     if [[ ! -z "$NSCONF_SENSITIVE_CONTENT" ]]
