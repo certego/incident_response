@@ -236,16 +236,17 @@ EOF
 EOF
 
     read -r -d '' getsmbconf <<"EOF"
-    ( curl 'http://127.0.0.1/vpn/../vpns/cfg/smb.conf' --path-as-is --connect-timeout 1 || \
-      curl 'https://127.0.0.1/vpn/../vpns/cfg/smb.conf' -k --path-as-is --connect-timeout 1 || \
-      fetch --no-verify-peer -T1 -qo - 'http://127.0.0.1/vpn/../vpns/cfg/smb.conf' || \
-      fetch --no-verify-peer -T1 -qo - 'https://127.0.0.1/vpn/../vpns/cfg/smb.conf' ) 2>/dev/null | \
-      grep -sE "encrypt\ passwords"
+    ( ifconfig | grep "inet " | grep -v 127.0.0.1 | awk -F" " '{print $2}' | while read IP; \
+    do curl "http://${IP}/vpn/../vpns/cfg/smb.conf" --path-as-is --connect-timeout 1 || \
+      curl 'https://${IP}/vpn/../vpns/cfg/smb.conf' -k --path-as-is --connect-timeout 1 || \
+      fetch -T1 -qo - 'http://${IP}/vpn/../vpns/cfg/smb.conf' || \
+      fetch -T1 -qo - 'https://${IP}/vpn/../vpns/cfg/smb.conf' ; \
+    done) 2>/dev/null | grep -sE "encrypt\ passwords"
 EOF
 
     read -r -d '' checkawsmetadata <<"EOF"
     ( curl 'http://169.254.169.254/latest/meta-data/instance-id' --connect-timeout 1 || \
-      fetch --no-verify-peer -T1 -qo - 'http://169.254.169.254/latest/meta-data/instance-id' ) 2>/dev/null
+      fetch -T1 -qo - 'http://169.254.169.254/latest/meta-data/instance-id' ) 2>/dev/null
 EOF
 
 ### possible regex bypass to upgrade with \( -path -o -path \) -prune -o
@@ -313,8 +314,8 @@ stat_from_stdin_file="`echo "$stat_from_stdin_file" | sed -r "s/B64_STAT_FROM_ST
 
 
     read -r -d '' all_nobody_recents_files_find <<"EOF"
-    find / \( -path /dev -o -path /proc \) -prune -o -user nobody \-exec
- -type f -a \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -exec bash -c "echo -n {} | STAT_FROM_STDIN_FILE" 2>/dev/null \; 
+    find / \( -path /dev -o -path /proc \) -prune -o -user nobody \
+    -type f -a \( -newerct MINTIMESTAMP -o -newermt MINTIMESTAMP \) -a \( ! -newerct MAXTIMESTAMP -o ! -newermt MAXTIMESTAMP \) -exec bash -c "echo -n {} | STAT_FROM_STDIN_FILE" 2>/dev/null \; 
 EOF
 
 all_nobody_recents_files_find="`echo "$all_nobody_recents_files_find" | sed -r "s/MINTIMESTAMP/$MINTIMESTAMP/g"`"
@@ -749,8 +750,9 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                     # update 20/01/2020 , thanks to @x1sec https://github.com/x1sec/CVE-2019-19781/blob/master/CVE-2019-19781-DFIR.md
                     # update on 03/02/2020 through https://github.com/citrix/ioc-scanner-CVE-2019-19781/blob/master/scanners/successful-scanning.sh
 
-                    WEBSHELL_EXPLOITATION="`grep -iEH '(support|shared|n_top|vpn|themes).+\.php[^\s]*\sHTTP/1\.1\"\s200' /var/log/httpaccess.log 2>/dev/null`"
-                    WEBSHELL_EXPLOITATION_GZ="`zgrep -iEH '(support|shared|n_top|vpn|themes).+\.php[^\s]*\sHTTP/1\.1\"\s200' /var/log/httpaccess.log.*.gz 2>/dev/null`"
+                    #WEBSHELL_EXPLOITATION="`grep -iEH '(support|shared|n_top|vpn|themes).+\.php.*\ HTTP/1\.1\"\ 200' /var/log/httpaccess.log 2>/dev/null`"
+                    WEBSHELL_EXPLOITATION="`grep -iEH '.*\.([pP]|%[57]0)([hH]|%[46]8)([pP]|%[57]0).*\ HTTP/1\.1\"\ 200' /var/log/httpaccess.log 2>/dev/null`"
+                    WEBSHELL_EXPLOITATION_GZ="`zgrep -iEH '.*\.([pP]|%[57]0)([hH]|%[46]8)([pP]|%[57]0).*\ HTTP/1\.1\"\ 200' /var/log/httpaccess.log.*.gz 2>/dev/null`"
                     if [[ ! ( -z "$WEBSHELL_EXPLOITATION" && -z "$WEBSHELL_EXPLOITATION_GZ" ) ]]
                         then
                             out-string    "################### [httpaccess.log* Webshell Exploitation (.php)] ##################"
@@ -759,8 +761,8 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                             out-string    "#####################################################################################"
                     fi
 
-                    CVE_EXPLOITATION_PL="`grep -iEH '(POST|GET).*\.pl[^\s]*\sHTTP/1\.1\"\s(304|200)' -A 1 /var/log/httpaccess.log 2>/dev/null`"
-                    CVE_EXPLOITATION_PL_GZ="`zgrep -iEH '(POST|GET).*\.pl[^\s]*\sHTTP/1\.1\"\s(304|200)' -A 1 /var/log/httpaccess.log.*.gz 2>/dev/null`"
+                    CVE_EXPLOITATION_PL="`grep -iEH '(POST|GET).*\.([pP]|%[57]0)([lL]|%[46]c).*\ HTTP/1\.1\"\ (304|200)' -A 1 /var/log/httpaccess.log 2>/dev/null`"
+                    CVE_EXPLOITATION_PL_GZ="`zgrep -iEH '(POST|GET).*\.([pP]|%[57]0)([lL]|%[46]c).*\ HTTP/1\.1\"\ (304|200)' -A 1 /var/log/httpaccess.log.*.gz 2>/dev/null`"
                     if [[ ! ( -z "$CVE_EXPLOITATION_PL" && -z "$CVE_EXPLOITATION_PL_GZ" ) ]]
                         then
                             out-string    "# [httpaccess.log* CVE-2019-19781 Exploitation (.pl) and malicious scripts dropped] #"
@@ -769,8 +771,8 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                             out-string    "#####################################################################################"
                     fi
                     
-                    CVE_EXPLOITATION_XML="`zgrep -iEH 'GET.*\.xml[^\s]*\sHTTP/1\.1\"\s(304|200)' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
-                    CVE_EXPLOITATION_XML_GZ="`zgrep -iEH 'GET.*\.xml[^\s]*\sHTTP/1\.1\"\s(304|200)' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    CVE_EXPLOITATION_XML="`grep -iEH  '.*/(v|%76)(p|%70)(n|%6[Ee])(s|%73)/[^\s]*\.(x|%[57]8)(m|%[46]d)(l|%[46]c).*\ HTTP/1\.1\"\ (304|200)' -B 1 /var/log/httpaccess.log 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    CVE_EXPLOITATION_XML_GZ="`zgrep -iEH '.*/(v|%76)(p|%70)(n|%6[Ee])(s|%73)/[^\s]*\.(x|%[57]8)(m|%[46]d)(l|%[46]c).*\ HTTP/1\.1\"\ (304|200)' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
                     if [[ ! ( -z "$CVE_EXPLOITATION_XML"  && -z "$CVE_EXPLOITATION_XML_GZ" ) ]]
                         then
                             out-string    "############### [httpaccess.log* CVE-2019-19781 Exploitation (.xml)] ################"
@@ -779,8 +781,8 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                             out-string    "#####################################################################################"
                     fi
 
-                    DIRECT_CONF_FILE_ACCESS="`zgrep -iEH 'GET.*\.conf[^\s]*\sHTTP/1\.1\"\s200' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
-                    DIRECT_CONF_FILE_ACCESS_GZ="`zgrep -iEH 'GET.*\.conf[^\s]*\sHTTP/1\.1\"\s200' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    DIRECT_CONF_FILE_ACCESS="`grep -iEH '.*\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/1\.1\"\ 200' -B 1 /var/log/httpaccess.log 2>/dev/null`"
+                    DIRECT_CONF_FILE_ACCESS_GZ="`zgrep -iEH '.*\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/1\.1\"\ 200' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null`"
                     if [[ ! ( -z "$CVE_EXPLOITATION_XML"  && -z "$CVE_EXPLOITATION_XML_GZ" ) ]]
                         then
                             out-string    "############ [httpaccess.log* CVE-2019-19781 direct (.conf) file access] ############"
