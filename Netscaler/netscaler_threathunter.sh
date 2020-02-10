@@ -781,13 +781,13 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                             out-string    "#####################################################################################"
                     fi
 
-                    DIRECT_CONF_FILE_ACCESS="`grep -iEH '.*\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/1\.1\"\ 200' -B 1 /var/log/httpaccess.log 2>/dev/null`"
-                    DIRECT_CONF_FILE_ACCESS_GZ="`zgrep -iEH '.*\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/1\.1\"\ 200' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null`"
-                    if [[ ! ( -z "$CVE_EXPLOITATION_XML"  && -z "$CVE_EXPLOITATION_XML_GZ" ) ]]
+                    DIRECT_NSCONF_FILE_ACCESS="`grep -iEH '.*([nN]|%[64]e)([sS]|%[75]3)\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/1\.1\"\ 200'  /var/log/httpaccess.log 2>/dev/null`"
+                    DIRECT_NSCONF_FILE_ACCESS_GZ="`zgrep -iEH '.*([nN]|%[64]e)([sS]|%[75]3)\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/1\.1\"\ 200'  /var/log/httpaccess.log.*.gz 2>/dev/null`"
+                    if [[ ! ( -z "$DIRECT_NSCONF_FILE_ACCESS"  && -z "$DIRECT_NSCONF_FILE_ACCESS_GZ" ) ]]
                         then
-                            out-string    "############ [httpaccess.log* CVE-2019-19781 direct (.conf) file access] ############"
-                            out-string    "$DIRECT_CONF_FILE_ACCESS"
-                            out-string    "$DIRECT_CONF_FILE_ACCESS_GZ"
+                            out-string    "########### [httpaccess.log* CVE-2019-19781 direct (ns.conf) file access] ###########"
+                            out-string    "$DIRECT_NSCONF_FILE_ACCESS"
+                            out-string    "$DIRECT_NSCONF_FILE_ACCESS_GZ"
                             out-string    "#####################################################################################"
                     fi
                 }
