@@ -750,9 +750,9 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                     # update 20/01/2020 , thanks to @x1sec https://github.com/x1sec/CVE-2019-19781/blob/master/CVE-2019-19781-DFIR.md
                     # update on 03/02/2020 through https://github.com/citrix/ioc-scanner-CVE-2019-19781/blob/master/scanners/successful-scanning.sh
 
-                    #WEBSHELL_EXPLOITATION="`grep -iEH '(support|shared|n_top|vpn|themes).+\.php.*\ HTTP/1\.1\"\ 200' /var/log/httpaccess.log 2>/dev/null`"
-                    WEBSHELL_EXPLOITATION="`grep -iEH '.*\.([pP]|%[57]0)([hH]|%[46]8)([pP]|%[57]0).*\ HTTP/1\.1\"\ 200' /var/log/httpaccess.log 2>/dev/null`"
-                    WEBSHELL_EXPLOITATION_GZ="`zgrep -iEH '.*\.([pP]|%[57]0)([hH]|%[46]8)([pP]|%[57]0).*\ HTTP/1\.1\"\ 200' /var/log/httpaccess.log.*.gz 2>/dev/null`"
+                    #WEBSHELL_EXPLOITATION="`grep -iEH '(support|shared|n_top|vpn|themes).+\.php.*\ HTTP/[1-9]\.[0-9]\"\ 200' /var/log/httpaccess.log 2>/dev/null`"
+                    WEBSHELL_EXPLOITATION="`grep -iEH '.*\.([pP]|%[57]0)([hH]|%[46]8)([pP]|%[57]0).*\ HTTP/[1-9]\.[0-9]\"\ 200' /var/log/httpaccess.log 2>/dev/null`"
+                    WEBSHELL_EXPLOITATION_GZ="`zgrep -iEH '.*\.([pP]|%[57]0)([hH]|%[46]8)([pP]|%[57]0).*\ HTTP/[1-9]\.[0-9]\"\ 200' /var/log/httpaccess.log.*.gz 2>/dev/null`"
                     if [[ ! ( -z "$WEBSHELL_EXPLOITATION" && -z "$WEBSHELL_EXPLOITATION_GZ" ) ]]
                         then
                             out-string    "################### [httpaccess.log* Webshell Exploitation (.php)] ##################"
@@ -761,8 +761,8 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                             out-string    "#####################################################################################"
                     fi
 
-                    CVE_EXPLOITATION_PL="`grep -iEH '(POST|GET).*\.([pP]|%[57]0)([lL]|%[46]c).*\ HTTP/1\.1\"\ (304|200)' -A 1 /var/log/httpaccess.log 2>/dev/null`"
-                    CVE_EXPLOITATION_PL_GZ="`zgrep -iEH '(POST|GET).*\.([pP]|%[57]0)([lL]|%[46]c).*\ HTTP/1\.1\"\ (304|200)' -A 1 /var/log/httpaccess.log.*.gz 2>/dev/null`"
+                    CVE_EXPLOITATION_PL="`grep -iEH '.*\.([pP]|%[57]0)([lL]|%[46]c).*\ HTTP/[1-9]\.[0-9]\"\ (304|200)' -A 1 /var/log/httpaccess.log 2>/dev/null`"
+                    CVE_EXPLOITATION_PL_GZ="`zgrep -iEH '.*\.([pP]|%[57]0)([lL]|%[46]c).*\ HTTP/[1-9]\.[0-9]\"\ (304|200)' -A 1 /var/log/httpaccess.log.*.gz 2>/dev/null`"
                     if [[ ! ( -z "$CVE_EXPLOITATION_PL" && -z "$CVE_EXPLOITATION_PL_GZ" ) ]]
                         then
                             out-string    "# [httpaccess.log* CVE-2019-19781 Exploitation (.pl) and malicious scripts dropped] #"
@@ -771,8 +771,8 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                             out-string    "#####################################################################################"
                     fi
                     
-                    CVE_EXPLOITATION_XML="`grep -iEH  '.*/(v|%76)(p|%70)(n|%6[Ee])(s|%73)/[^\s]*\.(x|%[57]8)(m|%[46]d)(l|%[46]c).*\ HTTP/1\.1\"\ (304|200)' -B 1 /var/log/httpaccess.log 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
-                    CVE_EXPLOITATION_XML_GZ="`zgrep -iEH '.*/(v|%76)(p|%70)(n|%6[Ee])(s|%73)/[^\s]*\.(x|%[57]8)(m|%[46]d)(l|%[46]c).*\ HTTP/1\.1\"\ (304|200)' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    CVE_EXPLOITATION_XML="`grep -iEH  '.*/(v|%76)(p|%70)(n|%6[Ee])(s|%73)/[^\ ]*\.(x|%[57]8)(m|%[46]d)(l|%[46]c).*\ HTTP/[1-9]\.[0-9]\"\ (304|200)' -B 1 /var/log/httpaccess.log 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
+                    CVE_EXPLOITATION_XML_GZ="`zgrep -iEH '.*/(v|%76)(p|%70)(n|%6[Ee])(s|%73)/[^\ ]*\.(x|%[57]8)(m|%[46]d)(l|%[46]c).*\ HTTP/[1-9]\.[0-9]\"\ (304|200)' -B 1 /var/log/httpaccess.log.*.gz 2>/dev/null | fgrep -v ' /vpn/pluginlist.xml '`"
                     if [[ ! ( -z "$CVE_EXPLOITATION_XML"  && -z "$CVE_EXPLOITATION_XML_GZ" ) ]]
                         then
                             out-string    "############### [httpaccess.log* CVE-2019-19781 Exploitation (.xml)] ################"
@@ -781,8 +781,8 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
                             out-string    "#####################################################################################"
                     fi
 
-                    DIRECT_NSCONF_FILE_ACCESS="`grep -iEH '.*([nN]|%[64]e)([sS]|%[75]3)\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/1\.1\"\ 200'  /var/log/httpaccess.log 2>/dev/null`"
-                    DIRECT_NSCONF_FILE_ACCESS_GZ="`zgrep -iEH '.*([nN]|%[64]e)([sS]|%[75]3)\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/1\.1\"\ 200'  /var/log/httpaccess.log.*.gz 2>/dev/null`"
+                    DIRECT_NSCONF_FILE_ACCESS="`grep -iEH '.*([nN]|%[64]e)([sS]|%[75]3)\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/[1-9]\.[0-9]\"\ 200'  /var/log/httpaccess.log 2>/dev/null`"
+                    DIRECT_NSCONF_FILE_ACCESS_GZ="`zgrep -iEH '.*([nN]|%[64]e)([sS]|%[75]3)\.([cC]|%[46]3)([oO]|%[46]f)([nN]|%[46]e)([fF]|%[46]6).*\ HTTP/[1-9]\.[0-9]\"\ 200'  /var/log/httpaccess.log.*.gz 2>/dev/null`"
                     if [[ ! ( -z "$DIRECT_NSCONF_FILE_ACCESS"  && -z "$DIRECT_NSCONF_FILE_ACCESS_GZ" ) ]]
                         then
                             out-string    "########### [httpaccess.log* CVE-2019-19781 direct (ns.conf) file access] ###########"
@@ -1023,6 +1023,10 @@ all_users_recents_files_find="`echo -n "$all_users_recents_files_find" | sed -r 
 
 
                 }
+            
+            ## check changetime + modification
+            ## /etc/ntpd_ctl
+            ## /nsconfig/rc.netscaler
 
             get_loader()
                 {
